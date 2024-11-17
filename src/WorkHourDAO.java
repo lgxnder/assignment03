@@ -10,8 +10,6 @@ public class WorkHourDAO {
     public WorkHourDAO(Connection connection) {
         this.connection = connection;
     }
-    
-
 
     // insert new entry into database
     public void create(WorkHourEntry entry, TextArea textArea) {
@@ -93,9 +91,16 @@ public class WorkHourDAO {
         String query = "DELETE FROM WorkHours WHERE ID = ?";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
             stmt.setInt(1, id);
+
+            // execute deletion
             int rowsAffected = stmt.executeUpdate();
+
+            // check if rows affected
             if (rowsAffected > 0) {
-                textArea.appendText("Entry deleted successfully.\n");
+                textArea.appendText("Entry with ID " + id + " deleted successfully.\n");
+            } else {
+                // if no rows were affected
+                textArea.appendText("No entry found with ID " + id + ".\n");
             }
         } catch (SQLException e) {
             textArea.appendText("Error deleting entry: " + e.getMessage() + "\n");

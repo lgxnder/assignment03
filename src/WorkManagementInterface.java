@@ -149,7 +149,7 @@ public class WorkManagementInterface extends Application {
             }
             
         });
-
+        
         // update entry button (modify an existing record)
         updateButton.setOnAction(event -> {
             if (con != null) {
@@ -179,12 +179,32 @@ public class WorkManagementInterface extends Application {
         
         deleteButton.setOnAction(event -> {
             if (con != null) {
+                // get id from input field
+                String idStr = IDField.getText();
+
+                // validate id is not empty
+                if (idStr.isEmpty()) {
+                    displayError("ID must be filled out.", textArea);
+                    return;
+                }
+
+                try {
+                    int id = Integer.parseInt(idStr);
+                    if (id < 1) {
+                        displayError("ID must be greater than 0.", textArea);
+                        return;
+                    }
+        
+                    // call dao to delete record
+                    dao.delete(id, textArea);
+        
+                } catch (NumberFormatException e) {
+                    displayError("ID must be a valid integer.", textArea);
+                }
 
             } else {
                 textArea.appendText("Database Not Connected. Please Connect.");
             }
-            // delete entry stuff here
-            // find entry by id and delete
         });
         
         
