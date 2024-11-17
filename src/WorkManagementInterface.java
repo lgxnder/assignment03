@@ -50,7 +50,6 @@ public class WorkManagementInterface extends Application {
         Button deleteButton = new Button("Delete Entry By ID");
         
         //// Place information nodes
-        
         pane.add(new Label("ID: "), 0, 0);
         pane.add(IDField, 1, 0);
         pane.add(new Label("Name: "), 0, 2);
@@ -93,6 +92,7 @@ public class WorkManagementInterface extends Application {
                 try {
                     int id = Integer.parseInt(idStr);
                     if (id > 0) {
+                        textArea.setText("");
                         dao.loadEntryByID(id, textArea);
                     } else {
                         displayError("ID Must be greater than 0", textArea);
@@ -196,7 +196,10 @@ public class WorkManagementInterface extends Application {
                 WorkHourEntry entry = new WorkHourEntry(id, name, role, hours);
                 dao.update(id, entry, textArea);
  
-                
+                IDField.clear();
+                nameField.clear();
+                roleField.clear();
+                hoursField.clear();
             } else {
                 textArea.appendText("Database Not Connected. Please Connect.");
             }
@@ -266,7 +269,7 @@ public class WorkManagementInterface extends Application {
     
     // load entries from database
     private void loadEntries(TextArea textArea) {
-        textArea.setText("");  // Clear previous entries
+        textArea.setText("");  // clear previous entries
         var entries = dao.readAll(textArea);
         for (WorkHourEntry entry : entries) {
             textArea.appendText(entry.getId() + " | " + entry.getName() + " | " + entry.getRole() + " | " + entry.getHours() + "\n");

@@ -53,14 +53,20 @@ public class WorkHourDAO {
 
     // read all entries from database
     public List<WorkHourEntry> readAll(TextArea textArea) {
+        // clear current list of entries to avoid duplication 
+        entries.clear();  
+
         String query = "SELECT * FROM WorkHours";
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) { // print out all of the results from the entries
+            while (rs.next()) {
+                // print out all of the results from the entries
                 int id = rs.getInt("ID");
                 String name = rs.getString("Name");
                 String role = rs.getString("Role");
                 int hours = rs.getInt("Hours");
+
+                // add entry to list
                 entries.add(new WorkHourEntry(id, name, role, hours));
             }
         } catch (SQLException e) {
