@@ -1,5 +1,3 @@
-//imports
-
 import javafx.application.Application;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
@@ -12,81 +10,17 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.TextArea;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Scanner;
-import javafx.scene.layout.HBox;
 import java.sql.*;
+
+import javafx.scene.layout.HBox;
 
 
 public class WorkManagementInterface extends Application {
    
-    // connection Class
+    // instantiate connection
     DatabaseConnection connection = new DatabaseConnection();
-       
-    // move these to its own class
-    String name = "";
-    String role = "";
-    String hoursStr = "";
-    
-    private void addEntry(TextArea textArea) {
+    WorkHourDAO dao; // declare dao for CRUD operations
 
-        // validate inputs 
-        //**note** replace these with the getters for when the class is made, thanks :D
-        if (role.isEmpty() || name.isEmpty() || hoursStr.isEmpty()) {
-            displayError(" All fields must be filled out.", textArea);
-            return;
-        }
-
-        try {  // ensure that hours is a non-negative integer
-            if (Integer.parseInt(hoursStr) < 0) {
-                displayError("Hours must be a non-negative number.", textArea);
-                return;
-            }
-        } catch (NumberFormatException e) {
-            displayError("Hours must be an integer value " + e.getMessage(), textArea);
-            return;
-        }
-
-        // write to file
-        try (PrintWriter writer = new PrintWriter(new FileWriter("work_hours.txt", true))) {
-            writer.println(role + " " + name + " " + hoursStr);
-
-            textArea.appendText("Added: " + role + " " + name + " " + hoursStr + "\n");
-        } catch (IOException e) {
-            displayError("Error writing to file: " + e.getMessage(), textArea);
-        }
-    }
-
-    private void loadEntries(TextArea textArea) {
-        textArea.setText("");
-        File file = new File("work_hours.txt");
-
-        // check if file exists
-        if (!file.exists()) {
-            displayError("File does not exist. Please add entries first.", textArea);
-            return;
-        }
-
-        // read file, append information to end of file
-        try (Scanner scanner = new Scanner(file)) {
-
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                textArea.appendText(line + "\n");
-            }
-        } catch (FileNotFoundException e) {
-            displayError("Error reading file: " + e.getMessage(), textArea);
-        }
-    }
-
-    // display error messages in the text area
-    private void displayError(String message, TextArea textArea) {
-        textArea.appendText("Error: " + message + "\n");
-    }
 
     @Override
     public void start(Stage stage) {
@@ -102,63 +36,142 @@ public class WorkManagementInterface extends Application {
         pane.setVgap(5.5);
 
         // Textfield node declarations 
+        TextField IDField = new TextField();
         TextField nameField = new TextField();
         TextField roleField = new TextField();
         TextField hoursField = new TextField();
 
         //Button Node Declarations
         Button loadButton = new Button("Load Entries");
+        Button loadSingle = new Button ("Load Entry By ID");
         Button addButton = new Button("Add Entry");
         Button updateButton = new Button("Modify Entries");
         Button deleteButton = new Button("Delete Entry By ID");
         
-        //// Place information nodes ------ col, row
-        pane.add(new Label("Name: "), 0, 0);
-        pane.add(nameField, 1, 0);
-
-        pane.add(new Label("Role: "), 0, 1);
-        pane.add(roleField, 1, 1);
-
-        pane.add(new Label("Hours Worked: "), 0, 2);
-        pane.add(hoursField, 1, 2);
+        //// Place information nodes
+        
+        pane.add(new Label("ID: "), 0, 0);
+        pane.add(IDField, 1, 0);
+        pane.add(new Label("Name: "), 0, 2);
+        pane.add(nameField, 1, 2);
+        pane.add(new Label("Role: "), 0, 3);
+        pane.add(roleField, 1, 3);
+        pane.add(new Label("Hours Worked: "), 0, 4);
+        pane.add(hoursField, 1, 4);
 
 
         // add buttons to button box, and add buttonbox to gridpane
-        btnBox.getChildren().addAll(loadButton, addButton, updateButton, deleteButton);
-        pane.add(btnBox, 1, 4);
+        btnBox.getChildren().addAll(loadSingle, loadButton, addButton, updateButton, deleteButton);
+        pane.add(btnBox, 1, 5);
 
         textArea.setPrefSize(200, 100);
-        pane.add(textArea, 1, 5);
+        pane.add(textArea, 1, 6);
 
+        // database connection setup
+        Connection con = connection.connectToDB(textArea);
+        dao = new WorkHourDAO(con); // initialize dao with the db connection
+
+        // load entries button (read all records)
         loadButton.setOnAction(event -> {
-            // add crud operation here
+            loadEntries(textArea);
         });
-        addButton.setOnAction(event -> {
-            // add crud operation method here
+
+        loadSingle.setOnAction(event -> {
+            if (con != null) {
+                String idStr = IDField.getText();
+                
+                if (idStr.isEmpty()) {
+                    displayError("ID Must be filled out", textArea);
+                    return;
+                }
+
+                try {
+                    int id = Integer.parseInt(idStr);
+                    if (id > 0) {
+                        dao.loadEntryByID(id, textArea);
+                    } else {
+                        displayError("ID Must be greater than 0", textArea);
+                        return;
+                    }
+                    
+                } catch (NumberFormatException e) {
+                displayError("ID must be an integer.", textArea);
+                return;
+            }
+            } else {
+                textArea.appendText("Database Not Connected. Please Connect.");
+                return;
+            }
+
         });
         
+
+        // add entries button (create a new record)
+        addButton.setOnAction(event -> {
+            if (con != null) {
+                            String name = nameField.getText();
+            String role = roleField.getText();
+            String hoursStr = hoursField.getText();
+
+            // validate inputs
+            if (name.isEmpty() || role.isEmpty() || hoursStr.isEmpty()) {
+                displayError("All fields must be filled out.", textArea);
+                return;
+            }
+
+            int hours;
+            try {
+                hours = Integer.parseInt(hoursStr);
+                if (hours < 0) {
+                    displayError("Hours must be a non-negative number.", textArea);
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                displayError("Hours must be an integer.", textArea);
+                return;
+            }
+
+            // create new entry
+            WorkHourEntry entry = new WorkHourEntry(0, name, role, hours);
+            dao.create(entry, textArea);
+            } else {
+                textArea.appendText("Database Not Connected. Please Connect.");
+            }
+            
+        });
+
+        // update entry button (modify an existing record)
         updateButton.setOnAction(event -> {
-            // add crud operation method here
+            if (con != null) {
+                
+            } else {
+                textArea.appendText("Database Not Connected. Please Connect.");
+            }
+            
+            // update entry stuff here
+            // find entry by id and modify
         });
         
         deleteButton.setOnAction(event -> {
-            // add crud operation method here
+            if (con != null) {
+
+            } else {
+                textArea.appendText("Database Not Connected. Please Connect.");
+            }
+            // delete entry stuff here
+            // find entry by id and delete
         });
         
-
+        
+        
         //// Create new scene, put it in the current stage ////
         Scene scene = new Scene(pane);
         stage.setTitle("Work Hours Management System");
         stage.setScene(scene);
         stage.show();
         
-        // create connection and get returned value
-        Connection con = connection.connectToDB(textArea);
-
-        loadEntries(textArea);
-        
-        
-        stage.setOnCloseRequest(event -> { // on Interface close, Close connection
+        // close connection when stage is closed
+        stage.setOnCloseRequest(event -> {
             try {
                 if (con != null) {
                    con.close();
@@ -168,13 +181,29 @@ public class WorkManagementInterface extends Application {
             }
         });
         
+        if (con == null) {
+            stage.setOnCloseRequest(event -> {
+            
+            });
+        }
         
     }
 
-    public static void main(String[] args) throws SQLException {
-        
+    // load entries from database
+    private void loadEntries(TextArea textArea) {
+        textArea.setText("");  // Clear previous entries
+        var entries = dao.readAll(textArea);
+        for (WorkHourEntry entry : entries) {
+            textArea.appendText(entry.getId() + " | " + entry.getName() + " | " + entry.getRole() + " | " + entry.getHours() + "\n");
+        }
+    }
+
+    // display error messages in textArea
+    private void displayError(String message, TextArea textArea) {
+        textArea.appendText("Error: " + message + "\n");
+    }
+
+    public static void main(String[] args) {
         launch();
-
     }
-
 }
