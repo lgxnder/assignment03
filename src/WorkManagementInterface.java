@@ -9,10 +9,9 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 
 import java.sql.*;
-
-import javafx.scene.layout.HBox;
 
 
 public class WorkManagementInterface extends Application {
@@ -45,7 +44,7 @@ public class WorkManagementInterface extends Application {
         Button loadButton = new Button("Load Entries");
         Button loadSingle = new Button ("Load Entry By ID");
         Button addButton = new Button("Add Entry");
-        Button updateButton = new Button("Modify Entries");
+        Button updateButton = new Button("Modify Entry");
         Button deleteButton = new Button("Delete Entry By ID");
         
         //// Place information nodes
@@ -109,30 +108,41 @@ public class WorkManagementInterface extends Application {
         // add entries button (create a new record)
         addButton.setOnAction(event -> {
             if (con != null) {
-                            String name = nameField.getText();
+            String idStr = IDField.getText();    
+            String name = nameField.getText();
             String role = roleField.getText();
             String hoursStr = hoursField.getText();
 
             // validate inputs
-            if (name.isEmpty() || role.isEmpty() || hoursStr.isEmpty()) {
-                displayError("All fields must be filled out.", textArea);
+            boolean valid = validate(idStr, name, role, hoursStr, textArea);
+            
+            if (valid == false) {
                 return;
             }
 
             int hours;
+            int id;
             try {
                 hours = Integer.parseInt(hoursStr);
+                id = Integer.parseInt(idStr);
                 if (hours < 0) {
                     displayError("Hours must be a non-negative number.", textArea);
                     return;
                 }
+                
+                if (id < 1) {
+                    displayError("ID Must be a non-negative number and greater than 0", textArea);
+                    return;
+                }
+                
+                
             } catch (NumberFormatException e) {
-                displayError("Hours must be an integer.", textArea);
+                displayError("Hours and ID must both be integers.", textArea);
                 return;
             }
 
             // create new entry
-            WorkHourEntry entry = new WorkHourEntry(0, name, role, hours);
+            WorkHourEntry entry = new WorkHourEntry(id, name, role, hours);
             dao.create(entry, textArea);
             } else {
                 textArea.appendText("Database Not Connected. Please Connect.");
@@ -143,13 +153,28 @@ public class WorkManagementInterface extends Application {
         // update entry button (modify an existing record)
         updateButton.setOnAction(event -> {
             if (con != null) {
+                String idStr = IDField.getText();
+                String name = nameField.getText();
+                String role = roleField.getText();
+                String hoursStr = hoursField.getText();
+                
+                boolean valid = validate(idStr, name, role, hoursStr, textArea);
+                
+                if (valid == false) {
+                    return;
+                }
+                
+                int id = Integer.parseInt(idStr);
+                int hours = Integer.parseInt(hoursStr);
+                
+                WorkHourEntry entry = new WorkHourEntry(id, name, role, hours);
+                dao.update(id, entry, textArea);
+ 
                 
             } else {
                 textArea.appendText("Database Not Connected. Please Connect.");
             }
             
-            // update entry stuff here
-            // find entry by id and modify
         });
         
         deleteButton.setOnAction(event -> {
@@ -189,6 +214,14 @@ public class WorkManagementInterface extends Application {
         
     }
 
+    private boolean validate(String id, String name, String role, String hours, TextArea textArea ) {
+        if (name.isEmpty() || role.isEmpty() || hours.isEmpty() || id.isEmpty()) {
+            displayError("All fields must be filled out.", textArea);
+            return false;
+        }
+        return true;
+    }
+    
     // load entries from database
     private void loadEntries(TextArea textArea) {
         textArea.setText("");  // Clear previous entries

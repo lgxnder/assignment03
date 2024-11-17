@@ -10,14 +10,17 @@ public class WorkHourDAO {
     public WorkHourDAO(Connection connection) {
         this.connection = connection;
     }
+    
+
 
     // insert new entry into database
     public void create(WorkHourEntry entry, TextArea textArea) {
-        String query = "INSERT INTO WorkHours (Name, Role, Hours) VALUES (?, ?, ?)";
+        String query = "INSERT INTO WorkHours (ID, Name, Role, Hours) VALUES (?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            stmt.setString(1, entry.getName());
-            stmt.setString(2, entry.getRole());
-            stmt.setInt(3, entry.getHours());
+            stmt.setInt(1, entry.getId());
+            stmt.setString(2, entry.getName());
+            stmt.setString(3, entry.getRole());
+            stmt.setInt(4, entry.getHours());
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected > 0) {
                 textArea.appendText("Entry added successfully.\n");
@@ -68,7 +71,15 @@ public class WorkHourDAO {
             stmt.setString(2, entry.getRole());
             stmt.setInt(3, entry.getHours());
             stmt.setInt(4, id);
+            
+            System.out.println(entry.getName());
+            System.out.println(entry.getRole());
+            System.out.println(entry.getHours());
+            System.out.println(id);
+            
             int rowsAffected = stmt.executeUpdate();
+
+            
             if (rowsAffected > 0) {
                 textArea.appendText("Entry updated successfully.\n");
             }
